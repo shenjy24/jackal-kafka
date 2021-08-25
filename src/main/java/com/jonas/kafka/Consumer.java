@@ -3,14 +3,45 @@ package com.jonas.kafka;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.consumer.OffsetAndMetadata;
+import org.apache.kafka.common.TopicPartition;
 
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Properties;
+import java.util.*;
 
 public class Consumer {
+
+    /**
+     * 如果poll返回的数据过多，可以分批次进行提交
+     */
+    public void batchConsume() {
+        KafkaConsumer<String, String> consumer = new KafkaConsumer<>(config("false"));
+        consumer.subscribe(Collections.singletonList("topicA"));
+        int count = 0;
+        Map<TopicPartition, OffsetAndMetadata> offsets = new HashMap<>();
+        try {
+            while (true) {
+                ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
+                for (ConsumerRecord<String, String> record : records) {
+                    process(record);
+                    offsets.put(new TopicPartition(record.topic(), record.partition()), new OffsetAndMetadata(record.offset() + 1));
+                    //每处理 100 条消息就提交一次位移
+                    if (count++ % 100 == 0) {
+                        consumer.commitAsync(offsets, null);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            //处理异常
+        } finally {
+            try {
+                //最后一次提交使用同步阻塞式提交
+                consumer.commitSync();
+            } finally {
+                consumer.close();
+            }
+        }
+    }
 
     /**
      * 最佳实践：
@@ -70,9 +101,13 @@ public class Consumer {
         }
     }
 
+    private void process(ConsumerRecord<String, String> record) {
+        System.out.printf("offset = %d, key = %s, value = %s%n", record.offset(), record.key(), record.value());
+    }
+
     private void process(List<ConsumerRecord<String, String>> records) {
         for (ConsumerRecord<String, String> record : records) {
-            System.out.printf("offset = %d, key = %s, value = %s%n", record.offset(), record.key(), record.value());
+            process(record);
         }
     }
 

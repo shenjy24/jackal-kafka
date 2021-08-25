@@ -28,6 +28,6 @@ public class AppTest {
 
     @Test
     public void testConsume() {
-        consumer.consume();
+        consumer.batchConsume();
     }
 }
