@@ -1,7 +1,5 @@
 package com.jonas;
 
-import static org.junit.Assert.assertTrue;
-
 import com.jonas.kafka.Consumer;
 import com.jonas.kafka.Producer;
 import org.junit.Before;
@@ -27,7 +25,7 @@ public class AppTest {
     }
 
     @Test
-    public void testConsume() {
-        consumer.batchConsume();
+    public void testAutoCommitConsume() {
+        consumer.autoCommitConsume();
     }
 }
