@@ -8,7 +8,7 @@ import org.junit.Test;
 /**
  * Unit test for simple App.
  */
-public class AppTest {
+public class KafkaTest {
 
     private Producer producer;
     private Consumer consumer;
