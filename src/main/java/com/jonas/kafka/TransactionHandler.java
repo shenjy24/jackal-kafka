@@ -15,19 +15,48 @@ import java.util.Map;
 import java.util.Properties;
 
 /**
- *
- *  在Kafka的topic：ods_user中有一些用户数据，数据格式如下：
- *
- *  姓名,性别,出生日期
- *  张三,1,1980-10-09
- *  李四,0,1985-11-01
- *
- *  我们需要编写程序，将用户的性别转换为男、女（1-男，0-女），转换后将数据写入到topic：dwd_user中。
- *  要求使用事务保障，要么消费了数据同时写入数据到 topic，提交offset。要么全部失败。
+ * 在Kafka的topic：ods_user中有一些用户数据，数据格式如下：
+ * <p>
+ * 姓名,性别,出生日期
+ * 张三,1,1980-10-09
+ * 李四,0,1985-11-01
+ * <p>
+ * 我们需要编写程序，将用户的性别转换为男、女（1-男，0-女），转换后将数据写入到topic：dwd_user中。
+ * 要求使用事务保障，要么消费了数据同时写入数据到 topic，提交offset。要么全部失败。
  */
 public class TransactionHandler {
 
-    public void handle() {
+    /**
+     * 只有写的场景
+     */
+    public void handleWrite() {
+        KafkaProducer<String, String> producer = createProducer();
+
+        // 初始化事务
+        producer.initTransactions();
+
+        try {
+            // 开启事务
+            producer.beginTransaction();
+            // 发送消息到ods_user
+            producer.send(new ProducerRecord<>("ods_user","张三,1,1980-10-09"));
+            // 发送消息到ods_user
+            producer.send(new ProducerRecord<>("ods_user","李四,0,1985-11-01"));
+            // 提交事务
+            producer.commitTransaction();
+        } catch (Exception e) {
+            e.printStackTrace();
+            // 终止事务
+            producer.abortTransaction();
+        } finally {
+            producer.close();
+        }
+    }
+
+    /**
+     * 消费-生产并存（consume-Transform-Produce）
+     */
+    public void handleConsumeTransformProduce() {
         KafkaProducer<String, String> producer = createProducer();
         KafkaConsumer<String, String> consumer = createConsumer();
 
@@ -47,7 +76,7 @@ public class TransactionHandler {
                     offsetCommits.put(new TopicPartition(record.topic(), record.partition()), new OffsetAndMetadata(record.offset() + 1));
                     // 5. 进行转换处理
                     String[] fields = record.value().split(",");
-                    fields[1] = fields[1].equalsIgnoreCase("1") ? "男":"女";
+                    fields[1] = fields[1].equalsIgnoreCase("1") ? "男" : "女";
                     String message = fields[0] + "," + fields[1] + "," + fields[2];
                     // 6. 生产消息到dwd_user
                     producer.send(new ProducerRecord<>("dwd_user", message));
@@ -58,6 +87,8 @@ public class TransactionHandler {
                 producer.commitTransaction();
             }
         } catch (Exception e) {
+            e.printStackTrace();
+            // 终止事务
             producer.abortTransaction();
         } finally {
             producer.close();
@@ -70,6 +101,7 @@ public class TransactionHandler {
         Properties props = new Properties();
         props.put("bootstrap.servers", "localhost:9092");
         props.put("transactional.id", "dwd_user");         //生产者需要配置事务ID
+        props.put("enable.idempotence", true);             //设置幂等性
         props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
         props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
 
