@@ -1,15 +1,45 @@
 package com.jonas.kafka;
 
-import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.clients.consumer.ConsumerRecords;
-import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.kafka.clients.consumer.OffsetAndMetadata;
+import org.apache.kafka.clients.consumer.*;
 import org.apache.kafka.common.TopicPartition;
 
 import java.time.Duration;
 import java.util.*;
 
 public class Consumer {
+
+    public void reBalanceConsume() {
+        Map<TopicPartition, OffsetAndMetadata> currentOffsets = new HashMap<>();
+        KafkaConsumer<String, String> consumer = new KafkaConsumer<>(config("false"));
+        consumer.subscribe(Collections.singletonList("topicA"), new ConsumerRebalanceListener() {
+            @Override
+            public void onPartitionsRevoked(Collection<TopicPartition> partitions) {
+                consumer.commitSync(currentOffsets);
+                currentOffsets.clear();
+            }
+
+            @Override
+            public void onPartitionsAssigned(Collection<TopicPartition> partitions) {
+            }
+        });
+        try {
+            while (true) {
+                ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
+                for (ConsumerRecord<String, String> record : records) {
+                    process(record);
+                    currentOffsets.put(new TopicPartition(record.topic(), record.partition()), new OffsetAndMetadata(record.offset() + 1));
+                }
+                consumer.commitAsync(currentOffsets, null);
+            }
+        } finally {
+            try {
+                //最后一次提交使用同步阻塞式提交
+                consumer.commitSync();
+            } finally {
+                consumer.close();
+            }
+        }
+    }
 
     /**
      * 按照分区粒度同步提交消费位移
@@ -87,6 +117,7 @@ public class Consumer {
                     //业务逻辑完成后再提交偏移量
                     process(buffer);
                     //commitAsync 是不会重试的，使用异步提交规避阻塞
+                    //需要在业务逻辑层面进行去重
                     consumer.commitAsync();
                     buffer.clear();
                 }
