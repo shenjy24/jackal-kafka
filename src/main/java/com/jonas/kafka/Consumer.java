@@ -12,6 +12,30 @@ import java.util.*;
 public class Consumer {
 
     /**
+     * 按照分区粒度同步提交消费位移
+     */
+    public void partitionConsume() {
+        KafkaConsumer<String, String> consumer = new KafkaConsumer<>(config("false"));
+        consumer.subscribe(Collections.singletonList("topicA"));
+        try {
+            while (true) {
+                ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
+                for (TopicPartition partition : records.partitions()) {
+                    List<ConsumerRecord<String, String>> partitionRecords = records.records(partition);
+                    for (ConsumerRecord<String, String> record : partitionRecords) {
+                        //业务逻辑处理
+                        process(record);
+                    }
+                    long lastConsumedOffset = partitionRecords.get(partitionRecords.size() - 1).offset();
+                    consumer.commitSync(Collections.singletonMap(partition, new OffsetAndMetadata(lastConsumedOffset + 1)));
+                }
+            }
+        } finally {
+            consumer.close();
+        }
+    }
+
+    /**
      * 如果poll返回的数据过多，可以分批次进行提交
      */
     public void batchConsume() {
@@ -101,13 +125,22 @@ public class Consumer {
         }
     }
 
-    private void process(ConsumerRecord<String, String> record) {
-        System.out.printf("offset = %d, key = %s, value = %s%n", record.offset(), record.key(), record.value());
-    }
-
-    private void process(List<ConsumerRecord<String, String>> records) {
-        for (ConsumerRecord<String, String> record : records) {
-            process(record);
+    /**
+     * 手动提交消费位移：每消费一条消息提交一次位移
+     */
+    public void manualCommitOneByOneConsume() {
+        KafkaConsumer<String, String> consumer = new KafkaConsumer<>(config("false"));
+        consumer.subscribe(Collections.singletonList("topicA"));
+        while (true) {
+            ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
+            for (ConsumerRecord<String, String> record : records) {
+                //业务逻辑处理
+                process(record);
+                //位移提交
+                TopicPartition partition = new TopicPartition(record.topic(), record.partition());
+                OffsetAndMetadata offsetAndMetadata = new OffsetAndMetadata(record.offset() + 1);
+                consumer.commitSync(Collections.singletonMap(partition, offsetAndMetadata));
+            }
         }
     }
 
@@ -135,5 +168,15 @@ public class Consumer {
         props.setProperty("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
         props.setProperty("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
         return props;
+    }
+
+    private void process(ConsumerRecord<String, String> record) {
+        System.out.printf("offset = %d, key = %s, value = %s%n", record.offset(), record.key(), record.value());
+    }
+
+    private void process(List<ConsumerRecord<String, String>> records) {
+        for (ConsumerRecord<String, String> record : records) {
+            process(record);
+        }
     }
 }
