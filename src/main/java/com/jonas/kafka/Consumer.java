@@ -12,14 +12,34 @@ public class Consumer {
         Map<TopicPartition, OffsetAndMetadata> currentOffsets = new HashMap<>();
         KafkaConsumer<String, String> consumer = new KafkaConsumer<>(config("false"));
         consumer.subscribe(Collections.singletonList("topicA"), new ConsumerRebalanceListener() {
+            /**
+             * 该方法会在再均衡开始之前和消费者停止读取消息之后被调用
+             * 可以通过该方法来处理消费位移的提交
+             *
+             * @param partitions 再均衡前所分配到的分区
+             */
             @Override
             public void onPartitionsRevoked(Collection<TopicPartition> partitions) {
                 consumer.commitSync(currentOffsets);
                 currentOffsets.clear();
             }
 
+            /**
+             * 该方法会在重新分配分区之后和消费者开始读取消息之前被调用
+             *
+             * @param partitions 再均衡后所分配到的分区
+             */
             @Override
             public void onPartitionsAssigned(Collection<TopicPartition> partitions) {
+                //获取消费偏移量，实现原理是向协调者发送获取请求
+                Map<TopicPartition, OffsetAndMetadata> offsetAndMetadataMap = consumer.committed(new HashSet<>(partitions));
+                for (TopicPartition partition : partitions) {
+                    OffsetAndMetadata offset = offsetAndMetadataMap.get(partition);
+                    if (null != offset) {
+                        //设置本地拉取分量，下次拉取消息以这个偏移量为准
+                        consumer.seek(partition, offset.offset());
+                    }
+                }
             }
         });
         try {
