@@ -44,12 +44,16 @@ public class Consumer {
         });
         try {
             while (true) {
-                ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
-                for (ConsumerRecord<String, String> record : records) {
-                    process(record);
-                    currentOffsets.put(new TopicPartition(record.topic(), record.partition()), new OffsetAndMetadata(record.offset() + 1));
+                try {
+                    ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
+                    for (ConsumerRecord<String, String> record : records) {
+                        process(record);
+                        currentOffsets.put(new TopicPartition(record.topic(), record.partition()), new OffsetAndMetadata(record.offset() + 1));
+                    }
+                    consumer.commitAsync(currentOffsets, null);
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
-                consumer.commitAsync(currentOffsets, null);
             }
         } finally {
             try {
