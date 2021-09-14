@@ -47,7 +47,7 @@ public class Consumer {
                 try {
                     ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
                     for (ConsumerRecord<String, String> record : records) {
-                        process(record);
+                        processRecord(record);
                         currentOffsets.put(new TopicPartition(record.topic(), record.partition()), new OffsetAndMetadata(record.offset() + 1));
                     }
                     consumer.commitAsync(currentOffsets, null);
@@ -78,7 +78,7 @@ public class Consumer {
                     List<ConsumerRecord<String, String>> partitionRecords = records.records(partition);
                     for (ConsumerRecord<String, String> record : partitionRecords) {
                         //业务逻辑处理
-                        process(record);
+                        processRecord(record);
                     }
                     long lastConsumedOffset = partitionRecords.get(partitionRecords.size() - 1).offset();
                     consumer.commitSync(Collections.singletonMap(partition, new OffsetAndMetadata(lastConsumedOffset + 1)));
@@ -101,7 +101,7 @@ public class Consumer {
             while (true) {
                 ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
                 for (ConsumerRecord<String, String> record : records) {
-                    process(record);
+                    processRecord(record);
                     offsets.put(new TopicPartition(record.topic(), record.partition()), new OffsetAndMetadata(record.offset() + 1));
                     //每处理 100 条消息就提交一次位移
                     if (count++ % 100 == 0) {
@@ -139,7 +139,7 @@ public class Consumer {
                 }
                 if (buffer.size() >= minBatchSize) {
                     //业务逻辑完成后再提交偏移量
-                    process(buffer);
+                    processRecord(buffer);
                     //commitAsync 是不会重试的，使用异步提交规避阻塞
                     //需要在业务逻辑层面进行去重
                     consumer.commitAsync();
@@ -161,7 +161,7 @@ public class Consumer {
     /**
      * 手动提交消费偏移量：使用commitSync同步提交，会阻塞消费端
      */
-    public void manualCommitConsume() {
+    public void manualCommitBatchConsume() {
         KafkaConsumer<String, String> consumer = new KafkaConsumer<>(config("false"));
         consumer.subscribe(Collections.singletonList("topicA"));
         final int minBatchSize = 200;
@@ -173,7 +173,7 @@ public class Consumer {
             }
             if (buffer.size() >= minBatchSize) {
                 //业务逻辑完成后再提交偏移量
-                process(buffer);
+                processRecord(buffer);
                 consumer.commitSync();
                 buffer.clear();
             }
@@ -190,7 +190,7 @@ public class Consumer {
             ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
             for (ConsumerRecord<String, String> record : records) {
                 //业务逻辑处理
-                process(record);
+                processRecord(record);
                 //位移提交
                 TopicPartition partition = new TopicPartition(record.topic(), record.partition());
                 OffsetAndMetadata offsetAndMetadata = new OffsetAndMetadata(record.offset() + 1);
@@ -209,7 +209,7 @@ public class Consumer {
         while (true) {
             ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
             for (ConsumerRecord<String, String> record : records) {
-                System.out.printf("offset = %d, key = %s, value = %s%n", record.offset(), record.key(), record.value());
+                processRecord(record);
             }
         }
     }
@@ -225,13 +225,13 @@ public class Consumer {
         return props;
     }
 
-    private void process(ConsumerRecord<String, String> record) {
+    private void processRecord(ConsumerRecord<String, String> record) {
         System.out.printf("offset = %d, key = %s, value = %s%n", record.offset(), record.key(), record.value());
     }
 
-    private void process(List<ConsumerRecord<String, String>> records) {
+    private void processRecord(List<ConsumerRecord<String, String>> records) {
         for (ConsumerRecord<String, String> record : records) {
-            process(record);
+            processRecord(record);
         }
     }
 }
