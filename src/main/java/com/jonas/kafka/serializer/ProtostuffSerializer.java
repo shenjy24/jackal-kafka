@@ -1,6 +1,6 @@
 package com.jonas.kafka.serializer;
 
-import com.jonas.kafka.pojo.Company;
+import com.jonas.kafka.company.Company;
 import io.protostuff.LinkedBuffer;
 import io.protostuff.ProtostuffIOUtil;
 import io.protostuff.Schema;

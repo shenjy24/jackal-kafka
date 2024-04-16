@@ -1,9 +1,7 @@
 package com.jonas;
 
-import com.jonas.kafka.CompanyConsumer;
-import com.jonas.kafka.CompanyProducer;
-import com.jonas.kafka.Consumer;
-import com.jonas.kafka.Producer;
+import com.jonas.kafka.company.CompanyConsumer;
+import com.jonas.kafka.company.CompanyProducer;
 import org.junit.Before;
 import org.junit.Test;
 

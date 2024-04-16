@@ -1,6 +1,6 @@
-package com.jonas.kafka.deserializer;
+package com.jonas.kafka.serializer;
 
-import com.jonas.kafka.pojo.Company;
+import com.jonas.kafka.company.Company;
 import org.apache.kafka.common.errors.SerializationException;
 import org.apache.kafka.common.serialization.Deserializer;
 

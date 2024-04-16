@@ -1,4 +1,4 @@
-package com.jonas.kafka.pojo;
+package com.jonas.kafka.company;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

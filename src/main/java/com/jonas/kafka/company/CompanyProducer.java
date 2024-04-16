@@ -1,7 +1,5 @@
-package com.jonas.kafka;
+package com.jonas.kafka.company;
 
-import com.jonas.kafka.pojo.Company;
-import com.jonas.kafka.serializer.CompanySerializer;
 import com.jonas.kafka.serializer.ProtostuffSerializer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;

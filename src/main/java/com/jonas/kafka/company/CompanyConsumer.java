@@ -1,15 +1,11 @@
-package com.jonas.kafka;
+package com.jonas.kafka.company;
 
-import com.jonas.kafka.deserializer.CompanyDeserializer;
-import com.jonas.kafka.deserializer.ProtostuffDeserializer;
-import com.jonas.kafka.pojo.Company;
+import com.jonas.kafka.serializer.ProtostuffDeserializer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
-import org.apache.kafka.common.serialization.StringSerializer;
 
 import java.time.Duration;
 import java.util.Collections;

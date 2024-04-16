@@ -1,6 +1,6 @@
 package com.jonas.kafka.serializer;
 
-import com.jonas.kafka.pojo.Company;
+import com.jonas.kafka.company.Company;
 import org.apache.kafka.common.serialization.Serializer;
 
 import java.nio.ByteBuffer;
